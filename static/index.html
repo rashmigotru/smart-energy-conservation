@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Resource Conservation</title>
+<style>
+:root{
+  --bg:#f5f7f4; --card:#fff; --ink:#1b2a22; --muted:#5f6f66; --line:#e0e6e1; --brand:#2f8f5b; --brand-d:#23704a;
+  --peak:#d9534f; --normal:#5b9bd5; --off:#5cb85c; --pref:#f0ad4e; --rec:#e8c200;
+  --eco:#2f8f5b; --mod:#e0a030; --waste:#d9534f; --shadow:0 1px 3px rgba(0,0,0,.08);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121815; --card:#1b241f; --ink:#e7eee9; --muted:#9aaba1; --line:#2c3a32; --shadow:none; --brand:#3fb073; --brand-d:#34a066;}}
+:root[data-theme="dark"]{--bg:#121815; --card:#1b241f; --ink:#e7eee9; --muted:#9aaba1; --line:#2c3a32; --shadow:none; --brand:#3fb073; --brand-d:#34a066;}
+*{box-sizing:border-box}
+html{height:100%}
+body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(135deg,#1f6f48,#2f8f5b);color:#fff;padding:20px 20px 0}
+.wrap{max-width:1080px;margin:0 auto}
+header h1{margin:0;font-size:22px;font-weight:700}
+header p{margin:4px 0 14px;opacity:.9;font-size:14px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.tabs{display:flex;gap:4px;overflow-x:auto}
+.tab{background:transparent;border:0;color:#e6f4ec;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--bg);color:var(--ink)}
+.tab:hover:not([aria-selected="true"]){background:rgba(255,255,255,.15)}
+main{padding:20px}
+section[hidden]{display:none}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 4px;font-size:16px}
+.card h3{margin:0 0 10px;font-size:14px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 12px}
+.kpi .v{font-size:28px;font-weight:700;color:var(--brand)}
+.kpi .l{color:var(--muted);font-size:13px}
+label{display:block;font-size:13px;font-weight:600;margin:12px 0 4px}
+label .val{float:right;font-weight:700;color:var(--brand)}
+select,input[type=number]{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+input[type=range]{width:100%;accent-color:var(--brand)}
+button.primary{margin-top:16px;width:100%;padding:11px;border:0;border-radius:8px;background:var(--brand);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+button.primary:hover{background:var(--brand-d)}
+button.primary:disabled{opacity:.6;cursor:wait}
+.theme{background:rgba(255,255,255,.18);border:0;color:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.badge{display:inline-block;padding:4px 12px;border-radius:99px;color:#fff;font-weight:700;font-size:14px}
+.b-Eco{background:var(--eco)}.b-Moderate{background:var(--mod)}.b-Wasteful{background:var(--waste)}
+.result{margin-top:4px}
+.big{font-size:34px;font-weight:800;line-height:1.1}
+.note{background:var(--bg);border-left:4px solid var(--brand);padding:10px 12px;border-radius:6px;margin:12px 0;font-size:14px}
+.warn{background:#fff4e0;color:#7a4b00;border-left:4px solid #f0ad4e;padding:10px 12px;border-radius:6px;margin:8px 0;font-size:13px}
+.err{background:#fde8e8;color:#8a1f1f;border-left:4px solid var(--peak);padding:10px 12px;border-radius:6px;margin-top:12px;font-size:14px}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin:4px 0 10px}
+.bar>div{height:100%}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600}
+svg text{fill:var(--muted);font-size:11px;font-family:inherit}
+.empty{color:var(--muted);text-align:center;padding:40px 10px}
+.chip{display:inline-block;background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:2px 10px;font-size:13px;font-weight:600;margin-right:6px}
+footer{color:var(--muted);font-size:12px;text-align:center;padding:20px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>⚡ Smart Resource Conservation</h1>
+        <p>ML-powered scheduling and usage insights for home appliances</p>
+      </div>
+      <button class="theme" id="themeBtn" title="Toggle light / dark">◐</button>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="dash" aria-selected="true">Dashboard</button>
+      <button class="tab" role="tab" data-tab="sched" aria-selected="false">Appliance scheduler</button>
+      <button class="tab" role="tab" data-tab="risk" aria-selected="false">Usage risk check</button>
+      <button class="tab" role="tab" data-tab="about" aria-selected="false">Assumptions</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ================= DASHBOARD ================= -->
+<section id="dash">
+  <div id="dashBody"><div class="empty">Loading analytics…</div></div>
+</section>
+
+<!-- ================= SCHEDULER ================= -->
+<section id="sched" hidden>
+  <div class="grid g2" style="grid-template-columns:minmax(300px,380px) 1fr">
+    <div class="card">
+      <h2>Appliance scheduler</h2>
+      <p class="sub">Finds the cheapest start time that still finishes the same day and respects your limits.</p>
+      <label>Appliance</label>
+      <select id="s_app"></select>
+      <label>Preferred start <span class="val" id="s_pref_v"></span></label>
+      <input type="range" id="s_pref" min="0" max="23" value="18">
+      <label>Day type</label>
+      <select id="s_day"><option>weekday</option><option>weekend</option></select>
+      <div id="s_more">
+        <label>Cycle length <span class="val" id="s_dur_v"></span></label>
+        <input type="range" id="s_dur" min="1" max="4" value="2">
+        <label>Max shift from preferred <span class="val" id="s_shift_v"></span></label>
+        <input type="range" id="s_shift" min="0" max="8" value="6">
+        <label>Earliest start <span class="val" id="s_early_v"></span></label>
+        <input type="range" id="s_early" min="0" max="12" value="6">
+        <label>Latest finish <span class="val" id="s_late_v"></span></label>
+        <input type="range" id="s_late" min="12" max="24" value="23">
+        <label>Energy per cycle (kWh, assumed)</label>
+        <input type="number" id="s_kwh" min="0.1" step="0.1" value="1.0">
+      </div>
+      <button class="primary" id="s_go">Recommend start time</button>
+      <div id="s_err"></div>
+    </div>
+    <div class="card" id="s_out"><div class="empty">Set your preferences and press <b>Recommend start time</b>.</div></div>
+  </div>
+</section>
+
+<!-- ================= RISK CHECK ================= -->
+<section id="risk" hidden>
+  <div class="grid g2" style="grid-template-columns:minmax(300px,380px) 1fr">
+    <div class="card">
+      <h2>Usage risk check</h2>
+      <p class="sub">Enter conditions; the trained models estimate energy use and classify it as Eco / Moderate / Wasteful.</p>
+      <label>Day</label>
+      <select id="r_day"></select>
+      <label>Hour <span class="val" id="r_hour_v"></span></label>
+      <input type="range" id="r_hour" min="0" max="23" value="18">
+      <label>Lights (Wh per 10 min) <span class="val" id="r_lit_v"></span></label>
+      <input type="range" id="r_lit" min="0" max="70" step="10" value="30">
+      <label>Outdoor temperature <span class="val" id="r_to_v"></span></label>
+      <input type="range" id="r_to" min="-6" max="33" step="0.5" value="8">
+      <label>Outdoor humidity <span class="val" id="r_rh_v"></span></label>
+      <input type="range" id="r_rh" min="20" max="100" step="1" value="70">
+      <label>Indoor temperature <span class="val" id="r_ti_v"></span></label>
+      <input type="range" id="r_ti" min="14" max="30" step="0.5" value="20">
+      <button class="primary" id="r_go">Check usage</button>
+      <div id="r_err"></div>
+    </div>
+    <div class="card" id="r_out"><div class="empty">Set conditions and press <b>Check usage</b>.</div></div>
+  </div>
+</section>
+
+<!-- ================= ASSUMPTIONS ================= -->
+<section id="about" hidden>
+  <div class="card" id="aboutBody"></div>
+</section>
+
+</main>
+<footer>Estimates come from models trained on one house, Jan–May 2016 (UCI Appliances Energy Prediction). Guidance, not measurement.</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const TCOL = {Peak:"var(--peak)", Normal:"var(--normal)", "Off-peak":"var(--off)"};
+let META = null;
+
+// ---------------------------------------------------------------- helpers
+const fmtH = h => String(h).padStart(2,"0")+":00";
+async function api(path, body){
+  const r = await fetch(path, body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {});
+  let j = {}; try{ j = await r.json(); }catch(e){}
+  if(!r.ok) throw new Error(j.error || ("Request failed ("+r.status+")"));
+  return j;
+}
+function bind(id, fmt){ // slider <-> label
+  const el = $("#"+id), out = $("#"+id+"_v");
+  const upd = () => { if(out) out.textContent = fmt(el.value); };
+  el.addEventListener("input", upd); upd(); return el;
+}
+const el = (tag, attrs={}, html="") => { const e=document.createElementNS("http://www.w3.org/2000/svg",tag); for(const k in attrs) e.setAttribute(k,attrs[k]); e.innerHTML=html; return e; };
+
+/* Bar chart (24 hourly bars or any categories). opts: colors[], band[{from,to,color}], marks[{from,to,color}], unit */
+function barChart(host, values, labels, colors, opts={}){
+  const W=520,H=opts.h||200,pl=38,pr=8,pt=10,pb=24;
+  const max = opts.max || Math.max(...values)*1.1 || 1, bw=(W-pl-pr)/values.length;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img">`;
+  for(let i=0;i<=4;i++){const y=pt+(H-pt-pb)*(1-i/4);s+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${pl-5}" y="${y+4}" text-anchor="end">${+(max*i/4).toFixed(max<5?2:0)}</text>`;}
+  (opts.marks||[]).forEach(m=>{s+=`<rect x="${pl+m.from*bw}" y="${pt}" width="${(m.to-m.from)*bw}" height="${H-pt-pb}" fill="${m.color}" opacity="${m.opacity||.35}"/>`;});
+  values.forEach((v,i)=>{const h=(H-pt-pb)*v/max;s+=`<rect x="${pl+i*bw+1.5}" y="${H-pb-h}" width="${bw-3}" height="${h}" rx="2" fill="${Array.isArray(colors)?colors[i]:colors}"><title>${labels[i]}: ${v}${opts.unit||""}</title></rect>`;});
+  labels.forEach((l,i)=>{ if(i%(opts.every||3)===0) s+=`<text x="${pl+i*bw+bw/2}" y="${H-7}" text-anchor="middle">${l}</text>`;});
+  host.innerHTML = s+"</svg>";
+}
+/* Line chart: series [{name,color,data[24]}], shaded bands, vertical marker */
+function lineChart(host, series, opts={}){
+  const W=520,H=opts.h||210,pl=40,pr=10,pt=10,pb=24, n=series[0].data.length;
+  const max=Math.max(...series.flatMap(s=>s.data))*1.1||1, X=i=>pl+(W-pl-pr)*i/(n-1), Y=v=>pt+(H-pt-pb)*(1-v/max);
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img">`;
+  for(let i=0;i<=4;i++){const y=Y(max*i/4);s+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${pl-5}" y="${y+4}" text-anchor="end">${Math.round(max*i/4)}</text>`;}
+  (opts.bands||[]).forEach(b=>{s+=`<rect x="${X(b.from)}" y="${pt}" width="${X(b.to)-X(b.from)}" height="${H-pt-pb}" fill="${b.color}" opacity="${b.opacity||.14}"/>`;});
+  for(let i=0;i<n;i+=3) s+=`<text x="${X(i)}" y="${H-7}" text-anchor="middle">${i}</text>`;
+  series.forEach(se=>{const d=se.data.map((v,i)=>(i?"L":"M")+X(i)+","+Y(v)).join(" ");
+    s+=`<path d="${d}" fill="none" stroke="${se.color}" stroke-width="2.2"/>`+se.data.map((v,i)=>`<circle cx="${X(i)}" cy="${Y(v)}" r="2.6" fill="${se.color}"><title>${se.name} ${i}:00 – ${v}</title></circle>`).join("");});
+  if(opts.marker!=null) s+=`<line x1="${X(opts.marker)}" x2="${X(opts.marker)}" y1="${pt}" y2="${H-pb}" stroke="var(--ink)" stroke-dasharray="4 3"/>`;
+  host.innerHTML=s+"</svg>";
+}
+const legend = items => `<div class="legend">${items.map(([c,t])=>`<span><i style="background:${c}"></i>${t}</span>`).join("")}</div>`;
+const tariffLegend = () => legend([[TCOL.Peak,"Peak (18–22)"],[TCOL.Normal,"Normal (06–18)"],[TCOL["Off-peak"],"Off-peak (22–06)"]]);
+
+// ---------------------------------------------------------------- tabs / theme
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", t===b));
+  ["dash","sched","risk","about"].forEach(id=>$("#"+id).hidden = id!==b.dataset.tab);
+}));
+$("#themeBtn").addEventListener("click",()=>{
+  const r=document.documentElement, dark = r.dataset.theme ? r.dataset.theme==="dark" : matchMedia("(prefers-color-scheme:dark)").matches;
+  r.dataset.theme = dark ? "light":"dark";
+});
+
+// ---------------------------------------------------------------- dashboard
+async function loadDashboard(){
+  const host=$("#dashBody");
+  let A; try{ A = await api("/api/analytics"); }catch(e){ host.innerHTML=`<div class="card"><div class="err">${e.message}</div></div>`; return; }
+  const m=A.models, w=A.waste, cg=A.clusters.groups, tcols=META.tariff_by_hour.map(p=>TCOL[p]);
+  host.innerHTML = `
+  <div class="grid g4">
+    <div class="card kpi"><div class="v">${A.dataset.rows.toLocaleString()}</div><div class="l">readings, every 10 min<br>${A.dataset.from} → ${A.dataset.to}</div></div>
+    <div class="card kpi"><div class="v">${w.time_share}%</div><div class="l">of the time is “Wasteful” (&gt; ${A.thresholds.waste_min} Wh) …</div></div>
+    <div class="card kpi"><div class="v">${w.energy_share}%</div><div class="l">… yet holds this share of all energy</div></div>
+    <div class="card kpi"><div class="v">${w.excess_share}%</div><div class="l">of energy is above the threshold – a <b>ceiling</b> on savings, not a promise</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h2>Average energy by hour</h2><p class="sub">Usage is lowest at night and builds through the day.</p><div id="c1"></div>${tariffLegend()}</div>
+    <div class="card"><h2>Share of readings that are “Wasteful”, by hour</h2><p class="sub">Waste is concentrated in daytime and early evening.</p><div id="c2"></div>${tariffLegend()}</div>
+    <div class="card"><h2>Where the excess energy sits</h2><p class="sub">Tariff shifting helps <b>cost</b>; cutting the <b>amount</b> needs daytime attention.</p>
+      ${["Normal","Peak","Off-peak"].map(p=>`<div style="display:flex;justify-content:space-between;font-size:13px"><span>${p}</span><b>${w.excess_by_period[p]??0}%</b></div><div class="bar"><div style="width:${w.excess_by_period[p]??0}%;background:${TCOL[p]}"></div></div>`).join("")}
+    </div>
+    <div class="card"><h2>Average energy by day of week</h2><p class="sub">Mean Wh per 10 minutes.</p><div id="c3"></div></div>
+    <div class="card"><h2>Usage habits (K-Means on daily load curves)</h2><p class="sub">${A.clusters.k} clear groups (silhouette ${A.clusters.silhouette}). Low-usage days put more of their energy into the evening peak – the best candidates for load shifting.</p><div id="c4"></div>
+      <div class="legend" id="c4l"></div>
+      <table style="margin-top:10px"><tr><th>Habit</th><th>Days</th><th>kWh/day</th><th>In peak</th><th>Busiest</th></tr>
+      ${cg.map(g=>`<tr><td>${g.name}</td><td>${g.days}</td><td>${g.avg_kwh}</td><td>${g.peak_share}%</td><td>${fmtH(g.busiest_hour)}</td></tr>`).join("")}</table></div>
+    <div class="card"><h2>Model scores (unseen final 20% of the timeline)</h2>
+      <p class="sub">Honest results: sensors can’t see what people are doing, so scores are moderate.</p>
+      <table><tr><th>Regression</th><th>R²</th><th>RMSE</th><th>MAE</th></tr>
+        <tr><td>Mean baseline</td><td>${m.regression.baseline.R2}</td><td>${m.regression.baseline.RMSE.toFixed(1)}</td><td>${m.regression.baseline.MAE.toFixed(1)}</td></tr>
+        <tr><td><b>${m.regression.name}</b></td><td>${m.regression.R2}</td><td>${m.regression.RMSE.toFixed(1)}</td><td>${m.regression.MAE.toFixed(1)}</td></tr></table>
+      <table style="margin-top:12px"><tr><th>Classifier</th><th>Acc.</th><th>Macro F1</th><th>Waste recall</th><th>AUC</th></tr>
+        ${Object.entries(m.classification).map(([k,v])=>`<tr><td>${k}</td><td>${v.accuracy}</td><td>${v.macro_f1}</td><td>${v.wasteful_recall}</td><td>${v.macro_auc}</td></tr>`).join("")}</table>
+    </div>
+  </div>`;
+  barChart($("#c1"), A.hourly_mean, [...Array(24).keys()], tcols, {unit:" Wh"});
+  barChart($("#c2"), A.waste_by_hour_pct, [...Array(24).keys()], tcols, {unit:"%"});
+  barChart($("#c3"), A.dow_mean, ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"], "var(--brand)", {every:1, unit:" Wh"});
+  const pal=["#2f8f5b","#d9534f","#5b9bd5","#8172b2"];
+  lineChart($("#c4"), cg.map((g,i)=>({name:g.name,color:pal[i%4],data:g.curve})), {bands:[{from:18,to:22,color:"#d9534f"}]});
+  $("#c4l").innerHTML = cg.map((g,i)=>`<span><i style="background:${pal[i%4]}"></i>${g.name} (n=${g.days})</span>`).join("")+`<span><i style="background:#d9534f;opacity:.4"></i>peak tariff</span>`;
+}
+
+// ---------------------------------------------------------------- scheduler
+function initScheduler(){
+  const app=$("#s_app"); Object.keys(META.appliances).forEach(k=>app.add(new Option(k,k)));
+  bind("s_pref",fmtH); bind("s_dur",v=>v+" h"); bind("s_shift",v=>"±"+v+" h"); bind("s_early",fmtH); bind("s_late",fmtH);
+  const sync=()=>{const a=META.appliances[app.value]; $("#s_more").style.display=a.shiftable?"":"none";
+    if(a.shiftable){$("#s_dur").value=a.duration_h; $("#s_dur").dispatchEvent(new Event("input")); $("#s_kwh").value=a.kwh;}};
+  app.addEventListener("change",sync); sync();
+  $("#s_go").addEventListener("click",async()=>{
+    const btn=$("#s_go"); btn.disabled=true; $("#s_err").innerHTML="";
+    try{
+      const r=await api("/api/schedule",{appliance:app.value,preferred_hour:+$("#s_pref").value,day_type:$("#s_day").value,
+        duration_h:+$("#s_dur").value,max_shift_h:+$("#s_shift").value,earliest_start:+$("#s_early").value,latest_finish:+$("#s_late").value,kwh:+$("#s_kwh").value});
+      renderSchedule(r);
+    }catch(e){ $("#s_err").innerHTML=`<div class="err">${e.message}</div>`; }
+    btn.disabled=false;
+  });
+}
+function renderSchedule(r){
+  const out=$("#s_out");
+  if(!r.shiftable){ out.innerHTML=`<h2>${r.appliance}</h2><div class="note">${r.message}</div><p>${r.advice}</p>`; return; }
+  const cols=META.tariff_by_hour.map(p=>TCOL[p]);
+  const same=r.shift_h===0;
+  out.innerHTML=`
+    <h2>${r.appliance} · ${r.duration_h}-hour cycle · ~${r.kwh} kWh</h2>
+    <div class="row" style="margin:14px 0">
+      <div><div class="sub" style="margin:0">Your preferred start</div><div class="big" style="color:var(--pref)">${fmtH(r.preferred_start)}</div><div class="sub">cost index ${r.cost_index_preferred}</div></div>
+      <div style="font-size:26px">→</div>
+      <div><div class="sub" style="margin:0">Recommended start</div><div class="big" style="color:var(--rec)">${fmtH(r.recommended_start)}</div><div class="sub">cost index ${r.cost_index_recommended}</div></div>
+      ${same?"":`<div class="kpi"><div class="v">${r.saving_pct>0?"−"+r.saving_pct+"%":r.saving_pct+"%"}</div><div class="l">cost</div></div>`}
+    </div>
+    <div class="note">${r.message}</div>
+    <div id="s_chart"></div>
+    ${tariffLegend().replace("</div>",`<span><i style="background:var(--pref)"></i>your cycle</span><span><i style="background:var(--rec)"></i>recommended cycle</span></div>`)}
+    <p class="sub" style="margin-top:10px">Guardrails: finishes the same day inside ${fmtH(r.allowed_window[0])}–${fmtH(r.allowed_window[1])}, never moved further than you allow, smallest possible shift. Cost index = kWh × relative tariff multiplier (assumed tariff).</p>`;
+  barChart($("#s_chart"), META.hour_mult, [...Array(24).keys()], cols, {max:1.8, every:2, h:190, marks:[
+    {from:r.preferred_start,to:r.preferred_start+r.duration_h,color:"#f0ad4e",opacity:.45},
+    {from:r.recommended_start,to:r.recommended_start+r.duration_h,color:"#e8c200",opacity:.6}]});
+}
+
+// ---------------------------------------------------------------- risk check
+function initRisk(){
+  META.days.forEach(d=>$("#r_day").add(new Option(d,d)));
+  bind("r_hour",fmtH); bind("r_lit",v=>v+" Wh"); bind("r_to",v=>v+" °C"); bind("r_rh",v=>v+" %"); bind("r_ti",v=>v+" °C");
+  $("#r_go").addEventListener("click",async()=>{
+    const btn=$("#r_go"); btn.disabled=true; $("#r_err").innerHTML="";
+    try{
+      renderRisk(await api("/api/risk",{day:$("#r_day").value,hour:+$("#r_hour").value,lights_wh:+$("#r_lit").value,
+        outdoor_temp:+$("#r_to").value,outdoor_rh:+$("#r_rh").value,indoor_temp:+$("#r_ti").value}));
+    }catch(e){ $("#r_err").innerHTML=`<div class="err">${e.message}</div>`; }
+    btn.disabled=false;
+  });
+}
+function renderRisk(r){
+  const pcol={Eco:"var(--eco)",Moderate:"var(--mod)",Wasteful:"var(--waste)"};
+  $("#r_out").innerHTML=`
+    <h2>${r.day} ${fmtH(r.hour)}</h2>
+    <p style="margin:4px 0 12px"><span class="chip" style="color:${TCOL[r.tariff_period]}">${r.tariff_period} tariff ×${r.tariff_multiplier.toFixed(2)}</span></p>
+    <div class="row" style="gap:28px;margin-bottom:6px">
+      <div><div class="sub" style="margin:0">Expected energy</div><div class="big">${r.energy_wh} <span style="font-size:16px;font-weight:600">Wh / 10 min</span></div><div class="sub">≈ ${r.avg_watts} W average · typical error ± ${r.mae} Wh</div></div>
+      <div><div class="sub" style="margin:0">Usage class</div><span class="badge b-${r.class}">${r.class}</span><div class="sub">${r.classifier} · Eco ≤ ${META.eco_max_wh} Wh, Wasteful &gt; ${META.waste_min_wh} Wh</div></div>
+    </div>
+    ${r.warnings.map(w=>`<div class="warn">⚠ ${w}</div>`).join("")}
+    <div class="note">${r.advice}</div>
+    <p style="margin:6px 0"><b>Lightest / cheapest hours</b> for these conditions: ${r.lightest_hours.map(h=>`<span class="chip">${fmtH(h)}</span>`).join("")}</p>
+    <h3 style="margin-top:16px">Decision-tree probabilities</h3>
+    ${META.classes.map(c=>`<div style="display:flex;justify-content:space-between;font-size:13px"><span>${c}</span><b>${Math.round(r.tree_probs[c]*100)}%</b></div><div class="bar"><div style="width:${r.tree_probs[c]*100}%;background:${pcol[c]}"></div></div>`).join("")}
+    <h3 style="margin-top:14px">Expected energy through the day (same weather)</h3>
+    <div id="r_chart"></div>${legend([["var(--brand)","expected Wh per 10 min"],["#d9534f","peak tariff"],["#5cb85c","off-peak"]])}`;
+  lineChart($("#r_chart"),[{name:"expected",color:"#2f8f5b",data:r.curve}],{marker:r.hour,bands:[{from:18,to:22,color:"#d9534f"},{from:0,to:6,color:"#5cb85c",opacity:.12},{from:22,to:23,color:"#5cb85c",opacity:.12}]});
+}
+
+// ---------------------------------------------------------------- assumptions
+function initAbout(){
+  const t=META.tariff;
+  $("#aboutBody").innerHTML=`
+    <h2>Assumptions &amp; limitations</h2>
+    <p class="sub">These are our stated assumptions, not facts from the data.</p>
+    <ol>
+      <li><b>Tariff</b> is an assumed time-of-use schedule (Peak 18–22 ×${t.Peak}, Off-peak 22–06 ×${t["Off-peak"]}, Normal ×${t.Normal}) – not an official Andhra Pradesh slab.</li>
+      <li><b>Wasteful</b> = above the IQR upper fence (${META.waste_min_wh} Wh per 10 min); <b>Eco</b> ≤ ${META.eco_max_wh} Wh (≈ the median). Classes are defined by us.</li>
+      <li>Appliance cycle lengths and kWh per cycle are illustrative; the dataset has no per-appliance measurements.</li>
+      <li><b>Models:</b> ${META.models.regressor} (regression, MAE ≈ ${META.models.mae} Wh) and ${META.models.classifier} (classification), trained on the first 80% of the timeline.</li>
+    </ol>
+    <h3>Limitations</h3>
+    <ul>
+      <li>No water data – water conservation is future work.</li>
+      <li>Whole-house load, not individual appliances.</li>
+      <li>Weak predictability: sensors capture weather and rooms, not occupant activity.</li>
+      <li>One house, Jan–May 2016; results may not transfer.</li>
+      <li>The waste figure is an upper bound, not a guaranteed saving.</li>
+    </ul>`;
+}
+
+// ---------------------------------------------------------------- boot
+(async function(){
+  try{
+    META = await api("/api/meta");
+    initScheduler(); initRisk(); initAbout(); loadDashboard();
+  }catch(e){
+    $("#dashBody").innerHTML=`<div class="card"><div class="err">Cannot reach the backend: ${e.message}. Start it with <code>python app.py</code>.</div></div>`;
+  }
+})();
+</script>
+</body>
+</html>
